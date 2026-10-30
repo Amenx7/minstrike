@@ -1,13 +1,13 @@
 const http=require('http'),fs=require('fs'),path=require('path');
 const {WebSocketServer}=require('ws');
 const LIM=10;
-const boxes=[[0,0,8,8,4],[-15,-10,10,2,3],[15,10,10,2,3],[-20,15,3,12,4],[20,-15,3,12,4],[0,-22,16,2,3],[0,22,16,2,3],[-8,-30,4,4,2],[8,30,4,4,2],[0,-50,100,2,6],[0,50,100,2,6],[-50,0,2,100,6],[50,0,2,100,6]];
-const srv=http.createServer((q,r)=>fs.readFile(path.join(__dirname,'index.html'),(e,d)=>{r.writeHead(200,{'Content-Type':'text/html'});r.end(d)}));
+const MAP=require('./map.js'),boxes=MAP.boxes;
+const srv=http.createServer((q,r)=>{const f=q.url.startsWith('/map.js')?'map.js':'index.html';fs.readFile(path.join(__dirname,f),(e,d)=>{r.writeHead(200,{'Content-Type':f==='map.js'?'application/javascript':'text/html'});r.end(d)})});
 const wss=new WebSocketServer({server:srv});
 const rooms=[];let nid=1;
 const send=(p,m)=>{if(p.ws.readyState===1)p.ws.send(JSON.stringify(m))};
 const bc=(r,m)=>r.players.forEach(p=>send(p,m));
-const spawn=t=>({x:(Math.random()-.5)*20,y:0,z:t===0?40:-40});
+const spawn=t=>MAP.spawn(t);
 function getRoom(mode){let r=rooms.find(r=>r.mode===mode&&!r.started);if(!r){r={mode,players:[],started:false,score:[0,0],over:false};rooms.push(r)}return r}
 function endRoom(r,w){if(r.over)return;r.over=true;r.started=false;bc(r,{t:'end',w,sc:r.score});const i=rooms.indexOf(r);if(i>-1)rooms.splice(i,1)}
 function wall(o,d){let best=1e9;for(const[x,z,w,dd,h]of boxes){let t0=0,t1=1e9,ok=true;const mn=[x-w/2,0,z-dd/2],mx=[x+w/2,h,z+dd/2];
